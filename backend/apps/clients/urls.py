@@ -1,11 +1,8 @@
 # ফাইল: backend/apps/clients/urls.py
-# এই ফাইলটি clients app-এর URL routes ধারণ করে।
-
-from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from .views import ClientViewSet
 
 router = DefaultRouter()
+router.register(r'clients', ClientViewSet, basename='client')
 
-urlpatterns = [
-    path('', include(router.urls)),
-]
+urlpatterns = router.urls

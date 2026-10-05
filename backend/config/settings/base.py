@@ -271,6 +271,36 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(hour=3, minute=0, day_of_week=0),
         'kwargs': {'days': 90},
     },
+
+    # =============================================
+    # Billing / Client Tasks
+    # =============================================
+    # প্রতিদিন সকাল ৬টায় আজকের bill_date যে client-দের বিল generate
+    'auto-generate-bills': {
+        'task': 'apps.billing.tasks.auto_generate_monthly_bills_task',
+        'schedule': crontab(hour=6, minute=0),
+    },
+    # প্রতিদিন সকাল ৭টায় overdue bills mark করা
+    'mark-overdue-bills': {
+        'task': 'apps.billing.tasks.mark_overdue_bills_task',
+        'schedule': crontab(hour=7, minute=0),
+    },
+    # প্রতিদিন সকাল ৮টায় মেয়াদ শেষ client disable
+    'disable-expired-clients': {
+        'task': 'apps.clients.tasks.disable_expired_clients_task',
+        'schedule': crontab(hour=8, minute=0),
+    },
+    # প্রতিদিন সন্ধ্যা ৬টায় expiry reminder SMS (৩ দিন আগে)
+    'expiry-reminder-sms': {
+        'task': 'apps.clients.tasks.send_expiry_reminder_sms_task',
+        'schedule': crontab(hour=18, minute=0),
+        'kwargs': {'days_before': 3},
+    },
+    # প্রতি মাসের ১ তারিখ রাত ১২টায় renewal flags reset
+    'reset-renewal-flags': {
+        'task': 'apps.clients.tasks.reset_renewal_flags_task',
+        'schedule': crontab(hour=0, minute=0, day_of_month=1),
+    },
 }
 
 # =============================================
