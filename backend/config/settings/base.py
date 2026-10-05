@@ -74,7 +74,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # Middleware কনফিগারেশন
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # CORS middleware (frontend-backend যোগাযোগের জন্য)
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -85,7 +85,6 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'config.urls'
 
-# Template কনফিগারেশন
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -102,12 +101,14 @@ TEMPLATES = [
     },
 ]
 
-# WSGI এবং ASGI কনফিগারেশন
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
-# PostgreSQL ডেটাবেস কনফিগারেশন
+# =============================================
+# Database কনফিগারেশন (Multiple Databases)
+# =============================================
 DATABASES = {
+    # ISP-BCRM মূল database
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': config('DB_NAME', default='isp_crm_db'),
@@ -115,11 +116,9 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD', default=''),
         'HOST': config('DB_HOST', default='localhost'),
         'PORT': config('DB_PORT', default='5432'),
-        'OPTIONS': {
-            'connect_timeout': 10,
-        },
+        'OPTIONS': {'connect_timeout': 10},
     },
-    # FreeRADIUS ডেটাবেস (আলাদা connection)
+    # FreeRADIUS-এর আলাদা database (radcheck, radreply, radusergroup)
     'radius': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': config('RADIUS_DB_NAME', default='radius'),
@@ -127,10 +126,13 @@ DATABASES = {
         'PASSWORD': config('RADIUS_DB_PASSWORD', default=''),
         'HOST': config('RADIUS_DB_HOST', default='localhost'),
         'PORT': config('RADIUS_DB_PORT', default='5432'),
+        'OPTIONS': {'connect_timeout': 10},
     },
 }
 
-# Password Validation
+# FreeRADIUS database-এর জন্য database router
+DATABASE_ROUTERS = ['apps.servers.db_router.RadiusDBRouter']
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -138,70 +140,55 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Custom User Model (আমাদের নিজস্ব user model ব্যবহার করা হচ্ছে)
+# Custom User Model
 AUTH_USER_MODEL = 'accounts.User'
 
-# Internationalization (বাংলাদেশ timezone)
+# Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Dhaka'
 USE_I18N = True
 USE_TZ = True
 
-# Static & Media Files কনফিগারেশন
+# Static & Media Files
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'static'
 STATICFILES_DIRS = []
-
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default Primary Key Field Type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # =============================================
 # Django REST Framework কনফিগারেশন
 # =============================================
 REST_FRAMEWORK = {
-    # JWT Token authentication ব্যবহার করা হচ্ছে
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
-    # Pagination কনফিগারেশন (প্রতি পেজে ২০টি রেকর্ড)
     'DEFAULT_PAGINATION_CLASS': 'utils.pagination.StandardResultsSetPagination',
     'PAGE_SIZE': 20,
-    # Filtering কনফিগারেশন
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
-    # API Documentation কনফিগারেশন
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    # Error Renderer
-    'DEFAULT_RENDERER_CLASSES': (
-        'rest_framework.renderers.JSONRenderer',
-    ),
-    # Throttling (Rate limiting)
+    'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.JSONRenderer',),
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
     ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/hour',
-        'user': '1000/hour',
-    },
+    'DEFAULT_THROTTLE_RATES': {'anon': '100/hour', 'user': '1000/hour'},
 }
 
 # =============================================
 # JWT Token কনফিগারেশন
 # =============================================
 SIMPLE_JWT = {
-    # Access token ৬০ মিনিট পর expire হবে
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', default=60, cast=int)),
-    # Refresh token ৭ দিন পর expire হবে
     'REFRESH_TOKEN_LIFETIME': timedelta(days=config('JWT_REFRESH_TOKEN_LIFETIME_DAYS', default=7, cast=int)),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -209,7 +196,6 @@ SIMPLE_JWT = {
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
     'AUTH_HEADER_TYPES': ('Bearer',),
-    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
     'TOKEN_OBTAIN_SERIALIZER': 'apps.accounts.serializers.CustomTokenObtainPairSerializer',
@@ -228,12 +214,12 @@ CACHES = {
             'SOCKET_TIMEOUT': 5,
         },
         'KEY_PREFIX': 'isp_crm',
-        'TIMEOUT': 300,  # ৫ মিনিট cache expire
+        'TIMEOUT': 300,
     }
 }
 
 # =============================================
-# Celery কনফিগারেশন (Background Tasks)
+# Celery কনফিগারেশন
 # =============================================
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/2')
 CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/3')
@@ -243,35 +229,48 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Dhaka'
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
-# =============================================
-# Django Channels কনফিগারেশন (WebSocket)
-# =============================================
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [config('REDIS_URL', default='redis://localhost:6379/0')],
-        },
+# Celery Scheduled Tasks (Periodic Tasks)
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    # প্রতি ৫ মিনিটে সব router-এর status check
+    'check-router-status': {
+        'task': 'apps.servers.tasks.check_all_routers_status',
+        'schedule': crontab(minute='*/5'),
+    },
+    # প্রতি রাত ২টায় সব router-এর auto backup
+    'auto-backup-routers': {
+        'task': 'apps.servers.tasks.auto_backup_all_routers',
+        'schedule': crontab(hour=2, minute=0),
+    },
+    # প্রতি ১০ মিনিটে active session sync
+    'sync-active-sessions': {
+        'task': 'apps.servers.tasks.sync_active_sessions_to_db',
+        'schedule': crontab(minute='*/10'),
     },
 }
 
 # =============================================
-# CORS কনফিগারেশন (Frontend থেকে API access)
+# Django Channels (WebSocket)
+# =============================================
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {'hosts': [config('REDIS_URL', default='redis://localhost:6379/0')]},
+    },
+}
+
+# =============================================
+# CORS কনফিগারেশন
 # =============================================
 CORS_ALLOWED_ORIGINS = [
     config('FRONTEND_URL', default='http://localhost:3000'),
-    'http://localhost:5173',  # Vite dev server
+    'http://localhost:5173',
 ]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
+    'accept', 'accept-encoding', 'authorization', 'content-type',
+    'origin', 'user-agent', 'x-csrftoken', 'x-requested-with',
 ]
 
 # =============================================
@@ -308,7 +307,7 @@ SSLCOMMERZ_STORE_PASS = config('SSLCOMMERZ_STORE_PASS', default='')
 SSLCOMMERZ_IS_SANDBOX = config('SSLCOMMERZ_IS_SANDBOX', default=True, cast=bool)
 
 # =============================================
-# API Documentation (Swagger/ReDoc)
+# API Documentation
 # =============================================
 SPECTACULAR_SETTINGS = {
     'TITLE': 'ISP-BCRM API',
@@ -336,9 +335,7 @@ LOGGING = {
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'logs/error.log',
         },
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
+        'console': {'class': 'logging.StreamHandler'},
     },
     'root': {
         'handlers': ['console'],
@@ -348,6 +345,11 @@ LOGGING = {
         'django': {
             'handlers': ['file', 'console'],
             'level': 'ERROR',
+            'propagate': False,
+        },
+        'apps.servers': {
+            'handlers': ['console'],
+            'level': 'INFO',
             'propagate': False,
         },
     },

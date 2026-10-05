@@ -1,12 +1,12 @@
 # ফাইল: docker-compose.yml
-# এই ফাইলটি ISP-BCRM প্রজেক্টের সব service (Django, PostgreSQL, Redis, Celery) Docker-এ চালানোর জন্য।
+# এই ফাইলটি ISP-BCRM প্রজেক্টের সব service Docker-এ চালানোর জন্য।
 
 version: '3.9'
 
 services:
 
   # =============================================
-  # PostgreSQL Database
+  # PostgreSQL Database (ISP-BCRM + FreeRADIUS)
   # =============================================
   db:
     image: postgres:15-alpine
@@ -14,7 +14,8 @@ services:
     restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+      - ./backend/scripts/init_db.sql:/docker-entrypoint-initdb.d/01_init_db.sql
+      - ./backend/scripts/freeradius/sql_schema.sql:/docker-entrypoint-initdb.d/02_radius_schema.sql
     environment:
       POSTGRES_DB: ${DB_NAME:-isp_crm_db}
       POSTGRES_USER: ${DB_USER:-isp_crm_user}
@@ -46,7 +47,29 @@ services:
       retries: 5
 
   # =============================================
-  # Django Backend (Development)
+  # FreeRADIUS Server
+  # =============================================
+  freeradius:
+    image: freeradius/freeradius-server:latest
+    container_name: isp_crm_freeradius
+    restart: unless-stopped
+    ports:
+      - "1812:1812/udp"   # Authentication port
+      - "1813:1813/udp"   # Accounting port
+      - "3799:3799/udp"   # CoA/Disconnect port
+    volumes:
+      - ./backend/scripts/freeradius:/etc/freeradius/3.0/custom:ro
+    environment:
+      - DB_HOST=db
+      - DB_NAME=radius
+      - DB_USER=${RADIUS_DB_USER:-radius_user}
+      - DB_PASS=${RADIUS_DB_PASSWORD:-radius_password}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # =============================================
+  # Django Backend
   # =============================================
   backend:
     build:
@@ -56,8 +79,9 @@ services:
     restart: unless-stopped
     command: >
       sh -c "python manage.py migrate &&
+             python manage.py migrate --database=radius &&
              python manage.py collectstatic --noinput &&
-             python manage.py runserver 0.0.0.0:8000"
+             daphne -b 0.0.0.0 -p 8000 config.asgi:application"
     volumes:
       - ./backend:/app
       - media_files:/app/media
@@ -75,7 +99,7 @@ services:
       - DJANGO_SETTINGS_MODULE=config.settings.development
 
   # =============================================
-  # Celery Worker (Background Tasks)
+  # Celery Worker
   # =============================================
   celery_worker:
     build:
@@ -95,7 +119,7 @@ services:
         condition: service_healthy
 
   # =============================================
-  # Celery Beat (Scheduled Tasks)
+  # Celery Beat (Scheduled Tasks - Router backup, auto disable, etc.)
   # =============================================
   celery_beat:
     build:
@@ -114,9 +138,6 @@ services:
       redis:
         condition: service_healthy
 
-# =============================================
-# Volumes (Persistent Data Storage)
-# =============================================
 volumes:
   postgres_data:
   redis_data:
