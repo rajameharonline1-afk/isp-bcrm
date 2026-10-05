@@ -233,6 +233,9 @@ CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 from celery.schedules import crontab
 
 CELERY_BEAT_SCHEDULE = {
+    # =============================================
+    # Servers / Mikrotik Tasks
+    # =============================================
     # প্রতি ৫ মিনিটে সব router-এর status check
     'check-router-status': {
         'task': 'apps.servers.tasks.check_all_routers_status',
@@ -243,10 +246,30 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.servers.tasks.auto_backup_all_routers',
         'schedule': crontab(hour=2, minute=0),
     },
-    # প্রতি ১০ মিনিটে active session sync
+    # প্রতি ১০ মিনিটে RADIUS active session sync
     'sync-active-sessions': {
         'task': 'apps.servers.tasks.sync_active_sessions_to_db',
         'schedule': crontab(minute='*/10'),
+    },
+
+    # =============================================
+    # OLT / SNMP Tasks
+    # =============================================
+    # প্রতি ৫ মিনিটে সব OLT-এর ONU RX power SNMP poll
+    'poll-all-olts-snmp': {
+        'task': 'apps.olt.tasks.poll_all_active_olts',
+        'schedule': crontab(minute='*/5'),
+    },
+    # প্রতি ১৫ মিনিটে critical signal ONU detect করে alert
+    'detect-critical-onus': {
+        'task': 'apps.olt.tasks.detect_critical_onus',
+        'schedule': crontab(minute='*/15'),
+    },
+    # প্রতি রবিবার রাত ৩টায় পুরানো signal log পরিষ্কার
+    'cleanup-signal-logs': {
+        'task': 'apps.olt.tasks.cleanup_old_signal_logs',
+        'schedule': crontab(hour=3, minute=0, day_of_week=0),
+        'kwargs': {'days': 90},
     },
 }
 
