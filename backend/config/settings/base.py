@@ -315,6 +315,20 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.hr.tasks.mark_absent_unmarked_employees_task',
         'schedule': crontab(hour=23, minute=0),
     },
+
+    # =============================================
+    # Accounting Tasks
+    # =============================================
+    # প্রতিরাত ১১:৫৯-এ দৈনিক হিসাব auto-close
+    'close-daily-account': {
+        'task': 'apps.accounting.tasks.close_daily_account_task',
+        'schedule': crontab(hour=23, minute=59),
+    },
+    # প্রতি মাসের শেষ দিনে account balance snapshot
+    'update-account-balances': {
+        'task': 'apps.accounting.tasks.update_account_balances_task',
+        'schedule': crontab(hour=0, minute=30, day_of_month='28,29,30,31'),
+    },
 }
 
 # =============================================

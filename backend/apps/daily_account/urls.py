@@ -1,11 +1,8 @@
 # ফাইল: backend/apps/daily_account/urls.py
-# এই ফাইলটি daily_account app-এর URL routes ধারণ করে।
-
-from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from .views import DailyAccountViewSet
 
 router = DefaultRouter()
+router.register(r'', DailyAccountViewSet, basename='daily-account')
 
-urlpatterns = [
-    path('', include(router.urls)),
-]
+urlpatterns = router.urls
