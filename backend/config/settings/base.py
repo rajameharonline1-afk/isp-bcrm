@@ -301,6 +301,20 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.clients.tasks.reset_renewal_flags_task',
         'schedule': crontab(hour=0, minute=0, day_of_month=1),
     },
+
+    # =============================================
+    # HR / Payroll Tasks
+    # =============================================
+    # প্রতি মাসের ১ তারিখে payroll auto-generate
+    'auto-generate-payroll': {
+        'task': 'apps.hr.tasks.auto_generate_monthly_payroll_task',
+        'schedule': crontab(hour=1, minute=0, day_of_month=1),
+    },
+    # প্রতিদিন রাত ১১টায় absent mark
+    'mark-absent-employees': {
+        'task': 'apps.hr.tasks.mark_absent_unmarked_employees_task',
+        'schedule': crontab(hour=23, minute=0),
+    },
 }
 
 # =============================================
