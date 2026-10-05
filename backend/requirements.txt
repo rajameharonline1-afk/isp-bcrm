@@ -1,0 +1,84 @@
+# ফাইল: backend/requirements.txt
+# ISP-BCRM প্রজেক্টের সব Python নির্ভরতা (dependencies) এই ফাইলে তালিকাভুক্ত।
+
+# Django Core
+Django==4.2.16
+djangorestframework==3.15.2
+
+# JWT Authentication
+djangorestframework-simplejwt==5.3.1
+
+# CORS Headers (Frontend থেকে API access-এর জন্য)
+django-cors-headers==4.4.0
+
+# Filtering & Search
+django-filter==24.2
+
+# Database - PostgreSQL
+psycopg2-binary==2.9.9
+
+# Redis (Cache + Message Broker)
+redis==5.0.8
+django-redis==5.4.0
+
+# Celery (Background Task Queue)
+celery==5.4.0
+django-celery-beat==2.6.0
+django-celery-results==2.5.1
+
+# WebSocket (Django Channels - Real-time updates)
+channels==4.1.0
+channels-redis==4.2.0
+daphne==4.1.2
+
+# Image Processing
+Pillow==10.4.0
+
+# Environment Variable Management
+python-decouple==3.8
+
+# API Documentation (Swagger/OpenAPI)
+drf-spectacular==0.27.2
+
+# SSH/Telnet (OLT, Router remote access)
+paramiko==3.4.1
+
+# SNMP (OLT monitoring)
+pysnmp==4.4.12
+
+# Mikrotik RouterOS API
+librouteros==3.2.1
+
+# Excel File Processing
+openpyxl==3.1.5
+pandas==2.2.2
+xlrd==2.0.1
+
+# PDF Generation (Reports)
+reportlab==4.2.2
+
+# Data Import/Export
+django-import-export==4.1.1
+
+# Timezone Support
+pytz==2024.1
+
+# HTTP Requests
+requests==2.32.3
+
+# Cryptography (Secure password storage)
+cryptography==43.0.1
+
+# Phone Number Validation
+phonenumbers==8.13.44
+django-phonenumber-field==8.0.0
+
+# Email validation
+django-extensions==3.2.3
+
+# Utilities
+python-dateutil==2.9.0
+Markdown==3.6
+
+# Development tools (only for dev)
+# ipython==8.26.0

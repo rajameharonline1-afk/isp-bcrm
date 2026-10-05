@@ -1,0 +1,10 @@
+# ফাইল: backend/apps/servers/apps.py
+# এই ফাইলটি servers app-এর Django AppConfig ধারণ করে।
+
+from django.apps import AppConfig
+
+
+class ServersConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'apps.servers'
+    verbose_name = 'Servers'

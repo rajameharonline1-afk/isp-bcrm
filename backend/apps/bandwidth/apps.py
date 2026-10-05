@@ -1,0 +1,10 @@
+# ফাইল: backend/apps/bandwidth/apps.py
+# এই ফাইলটি bandwidth app-এর Django AppConfig ধারণ করে।
+
+from django.apps import AppConfig
+
+
+class BandwidthConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'apps.bandwidth'
+    verbose_name = 'Bandwidth'

@@ -1,0 +1,124 @@
+# ফাইল: docker-compose.yml
+# এই ফাইলটি ISP-BCRM প্রজেক্টের সব service (Django, PostgreSQL, Redis, Celery) Docker-এ চালানোর জন্য।
+
+version: '3.9'
+
+services:
+
+  # =============================================
+  # PostgreSQL Database
+  # =============================================
+  db:
+    image: postgres:15-alpine
+    container_name: isp_crm_db
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    environment:
+      POSTGRES_DB: ${DB_NAME:-isp_crm_db}
+      POSTGRES_USER: ${DB_USER:-isp_crm_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-strongpassword}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-isp_crm_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =============================================
+  # Redis (Cache + Message Broker)
+  # =============================================
+  redis:
+    image: redis:7-alpine
+    container_name: isp_crm_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =============================================
+  # Django Backend (Development)
+  # =============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: isp_crm_backend
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+      - media_files:/app/media
+      - static_files:/app/static
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+
+  # =============================================
+  # Celery Worker (Background Tasks)
+  # =============================================
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: isp_crm_celery
+    restart: unless-stopped
+    command: celery -A config worker --loglevel=info --concurrency=4
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # =============================================
+  # Celery Beat (Scheduled Tasks)
+  # =============================================
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: isp_crm_celery_beat
+    restart: unless-stopped
+    command: celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+# =============================================
+# Volumes (Persistent Data Storage)
+# =============================================
+volumes:
+  postgres_data:
+  redis_data:
+  media_files:
+  static_files:
