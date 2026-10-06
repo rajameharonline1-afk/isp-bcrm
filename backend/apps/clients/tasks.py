@@ -43,21 +43,25 @@ def send_expiry_reminder_sms_task(self, days_before=3):
     """
     from apps.clients.models import Client
     from datetime import timedelta
+    from apps.sms.services import SMSService
+    from apps.system_config.services import SystemConfigService
 
+    # সিস্টেম setting-এ reminder দিন সেট করা থাকলে সেটিই প্রাধান্য পাবে
+    days_before = SystemConfigService.system().expiry_reminder_days or days_before
     reminder_date = date.today() + timedelta(days=days_before)
     clients = Client.objects.filter(
         status=Client.Status.ACTIVE,
         expiry_date=reminder_date,
-    ).values('id', 'full_name', 'phone', 'username', 'expiry_date')
+    )
 
     count = 0
     for client in clients:
         try:
-            # SMS পাঠানো (SMS module integrate হলে এখানে call করতে হবে)
-            logger.info(f"SMS reminder: {client['phone']} expires {client['expiry_date']}")
-            count += 1
+            # expiry_reminder template দিয়ে SMS queue করা (SMS module)
+            if SMSService.queue_event('expiry_reminder', client):
+                count += 1
         except Exception as exc:
-            logger.error(f"SMS failed for {client['phone']}: {exc}")
+            logger.error(f"SMS failed for {client.phone}: {exc}")
 
     return {'sms_sent': count, 'days_before': days_before}
 

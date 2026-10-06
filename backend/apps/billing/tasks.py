@@ -46,19 +46,21 @@ def send_due_reminder_sms_task(self):
     """
     from apps.clients.models import Client
 
+    from apps.sms.services import SMSService
+
     clients = Client.objects.filter(
         status=Client.Status.ACTIVE,
         due_amount__gt=0,
-    ).values('phone', 'full_name', 'due_amount', 'expiry_date')
+    )
 
     count = 0
-    for c in clients:
+    for client in clients:
         try:
-            # SMS module integrate হলে এখানে call করতে হবে
-            logger.info(f"Due reminder: {c['phone']} due={c['due_amount']}")
-            count += 1
+            # due_reminder template দিয়ে SMS queue করা (SMS module)
+            if SMSService.queue_event('due_reminder', client):
+                count += 1
         except Exception as exc:
-            logger.error(f"SMS error for {c['phone']}: {exc}")
+            logger.error(f"SMS error for {client.phone}: {exc}")
 
     return {'sms_sent': count}
 
