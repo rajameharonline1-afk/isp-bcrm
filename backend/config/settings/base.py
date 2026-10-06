@@ -329,6 +329,64 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.accounting.tasks.update_account_balances_task',
         'schedule': crontab(hour=0, minute=30, day_of_month='28,29,30,31'),
     },
+
+    # =============================================
+    # Email Tasks
+    # =============================================
+    # প্রতি সোমবার সকাল ৯টায় due client-দের email reminder
+    'billing-due-email': {
+        'task': 'apps.system_config.tasks.send_billing_due_email_task',
+        'schedule': crontab(hour=9, minute=0, day_of_week=1),
+    },
+    # প্রতিদিন সন্ধ্যা ৭টায় expiry reminder email (৩ দিন আগে)
+    'expiry-reminder-email': {
+        'task': 'apps.system_config.tasks.send_expiry_email_task',
+        'schedule': crontab(hour=19, minute=0),
+        'kwargs': {'days_before': 3},
+    },
+
+    # =============================================
+    # Payment Gateway Sync Tasks
+    # =============================================
+    # প্রতি ১৫ মিনিটে pending PGW payment-এর gateway status sync
+    'sync-pgw-payments': {
+        'task': 'apps.mac_reseller.tasks.sync_pending_pgw_payments_task',
+        'schedule': crontab(minute='*/15'),
+    },
+    # প্রতি ৩০ মিনিটে stale (৩০+ মিনিট পুরনো) pending payment expire
+    'expire-stale-pgw-payments': {
+        'task': 'apps.mac_reseller.tasks.expire_stale_pgw_payments_task',
+        'schedule': crontab(minute='*/30'),
+    },
+
+    # =============================================
+    # Report Generation Tasks
+    # =============================================
+    # প্রতিদিন রাত ১১:৩০-এ দৈনিক bill collection report
+    'daily-collection-report': {
+        'task': 'apps.reports.tasks.generate_daily_collection_report_task',
+        'schedule': crontab(hour=23, minute=30),
+    },
+    # প্রতি সোমবার সকাল ৭টায় due customer report
+    'due-customer-report': {
+        'task': 'apps.reports.tasks.generate_due_customer_report_task',
+        'schedule': crontab(hour=7, minute=0, day_of_week=1),
+    },
+    # প্রতি মাসের ২ তারিখ সকাল ৮টায় BTRC monthly report (গত মাসের)
+    'btrc-monthly-report': {
+        'task': 'apps.reports.tasks.generate_monthly_btrc_report_task',
+        'schedule': crontab(hour=8, minute=0, day_of_month=2),
+    },
+    # প্রতি মাসের ১ তারিখ সকাল ৯টায় মাসিক financial summary
+    'monthly-financial-summary': {
+        'task': 'apps.reports.tasks.generate_monthly_financial_summary_task',
+        'schedule': crontab(hour=9, minute=0, day_of_month=1),
+    },
+    # প্রতি মাসের ১ তারিখ সকাল ১০টায় discount report
+    'monthly-discount-report': {
+        'task': 'apps.reports.tasks.generate_discount_report_task',
+        'schedule': crontab(hour=10, minute=0, day_of_month=1),
+    },
 }
 
 # =============================================
